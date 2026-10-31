@@ -104,6 +104,8 @@ void rt_gpu_memory_written(uint32_t dst, uint32_t dpitch, int dx, int dy, int w,
 void rt_gpu_sync_span(uint32_t addr, uint32_t size);
 /* end of frame: submits the recorded work and shows the framebuffer at addr in the window */
 void rt_gpu_present(uint32_t addr, uint32_t stride, uint32_t fmt);
+/* Between frames: shown buffers go to 1x while a movie is playing, then back to --res-scale. */
+void rt_gpu_sync_movie_scale(void);
 /* reads the 480x272 display area of the framebuffer at addr as the GPU drew it, as RGBA (at a
  * higher internal resolution: box-filtered down to 480x272) */
 int rt_gpu_read_target(uint32_t addr, uint32_t stride, uint32_t fmt, uint8_t *rgba);

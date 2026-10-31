@@ -685,6 +685,7 @@ static void hle_MpegAvcDecode(RtCtx *c) {
     RtH264Pic pic;
     int got = decode_video(m, &pic);
     if (got) {
+        rt_host_movie_playing(1);
         int bpp = m->pixel_mode == PIX_8888 ? 4 : 2, w = pic.width < (int)fw ? pic.width : (int)fw;
         uint32_t pitch = fw * (uint32_t)bpp;
         if (fw <= 2048 && valid_range(buffer, pitch * (uint32_t)pic.height)) {
