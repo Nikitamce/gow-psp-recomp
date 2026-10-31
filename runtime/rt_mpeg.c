@@ -615,7 +615,7 @@ static void hle_MpegRingbufferPut(RtCtx *c) {
  * its end does (no more AUs, sceMpegAvcDecode reports the stream over), so the game goes on
  * along its own path. What the game still puts in the ring buffer is consumed unread. */
 static void check_skip(Mpeg *m) {
-    if (m->skipped) { if (m->next_packet == ring_packet) while (ring_packet(m)) {} return; }
+    if (m->skipped) return;
     if (!m->video_frames || m->logged_end) return;
     rt_host_movie_playing(1);
     if (!rt_host_take_movie_skip()) return;
@@ -623,7 +623,6 @@ static void check_skip(Mpeg *m) {
     m->have_vau = m->have_aau = 0;
     rt_host_movie_playing(0);
     rt_log("[mpeg] movie skipped after %u pictures\n", m->video_frames);
-    if (m->next_packet == ring_packet) while (ring_packet(m)) {}
 }
 
 /* (mpeg, streamId, au, attr) */
@@ -665,7 +664,10 @@ static void hle_MpegAvcDecode(RtCtx *c) {
     uint32_t buffer = rt_r32(A3);
     if (!m->have_vau && !next_video_au(m)) {
         if (init) rt_w32(init, 0);
-        if (stream_done(m)) { delay_us(DELAY_AVC_EMPTY); RET(ERR_AVC_DECODE_FATAL); }
+        if (stream_done(m)) {
+            delay_us(DELAY_AVC_EMPTY);
+            RET(ERR_NO_DATA);
+        }
         delay_us(DELAY_AVC_DECODE);
         RET(0);
     }
