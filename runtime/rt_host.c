@@ -547,13 +547,8 @@ static void screenshot(void) {
 }
 
 void rt_host_movie_playing(int on) {
-    if (on != g_movie_on) {
-        g_skip_req = 0;
-        g_movie_on = on;
-        rt_gpu_sync_movie_scale();
-    } else {
-        g_movie_on = on;
-    }
+    if (on != g_movie_on) g_skip_req = 0;
+    g_movie_on = on;
 }
 
 int rt_host_movie_is_playing(void) { return g_movie_on; }

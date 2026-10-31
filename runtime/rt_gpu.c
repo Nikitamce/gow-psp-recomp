@@ -555,31 +555,11 @@ static int target_textures(Target *t) {
     return 1;
 }
 
-/* Shown framebuffers: native 480x272 during FMV (the movie is that size; 6x+MSAA 8 on
- * every picture was ~20 fps). Gameplay keeps --res-scale. */
-static int display_scale(void) { return rt_host_movie_is_playing() ? 1 : g_scale; }
-static void rescale_target(int ti);
-
 /* The scale of a new target: the effects scale (--fx-scale) unless it is a framebuffer the game shows */
 static int target_scale(uint32_t addr) {
-    if (rt_host_movie_is_playing()) return 1;
     if (g_fx_scale == g_scale) return g_scale;
     for (int i = 0; i < g_ndisp; i++) if (g_disp[i] == addr) return g_scale;
     return g_fx_scale;
-}
-
-void rt_gpu_sync_movie_scale(void) {
-    if (!g_dev || g_ncmds) return;
-    int n = 0;
-    for (int i = 0; i < g_ntargets; i++) {
-        int want = target_scale(g_targets[i].addr);
-        if (g_targets[i].s == want) continue;
-        g_targets[i].want_s = want;
-        rescale_target(i);
-        n++;
-    }
-    if (n) printf("[gpu] FMV buffers %s: %d target(s) at %dx (gameplay %dx MSAA %dx)\n",
-                  rt_host_movie_is_playing() ? "on" : "off", n, display_scale(), g_scale, g_samples);
 }
 
 static int new_target(uint32_t addr, uint32_t pitch, int bpp, int fmt) {
@@ -2369,10 +2349,7 @@ void rt_gpu_present(uint32_t addr, uint32_t stride, uint32_t fmt) {
                 tg->version++;
             }
         }
-        for (int i = 0; i < g_ntargets; i++) {
-            int want = target_scale(g_targets[i].addr);
-            if (g_targets[i].s != want) g_targets[i].want_s = want;
-        }
+        if (t >= 0 && g_targets[t].s != g_scale) g_targets[t].want_s = g_scale;  /* shown: the full scale, from the next frame */
     }
     SDL_GPUCommandBuffer *cmd = SDL_AcquireGPUCommandBuffer(g_dev);
     if (!cmd) return;
