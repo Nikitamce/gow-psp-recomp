@@ -881,7 +881,7 @@ int rt_host_idle(uint64_t now_virt, uint64_t next_virt) {
             pump();
             ahead = (int64_t)(g_wall0 + (next_virt - g_virt0)) - (int64_t)now_us();
         }
-    } else if ((k_idle_vblank || g_movie_on) && rt_display_hz() > 61 && next_virt > now_virt && -ahead >= SKIP_MIN_US && -ahead <= SKIP_MAX_US) {
+    } else if (k_idle_vblank && !g_movie_on && rt_display_hz() > 61 && next_virt > now_virt && -ahead >= SKIP_MIN_US && -ahead <= SKIP_MAX_US) {
         uint64_t sk = (uint64_t)-ahead;
         if (sk >= SKIP_MIN_US) {
             k_idle_skip = sk;
