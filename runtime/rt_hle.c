@@ -24,6 +24,7 @@ void rt_log(const char *fmt, ...) {
     else printf("[%9.3f %-12s] ", (double)k_now / 1e6, "-");
     vprintf(fmt, ap);
     va_end(ap);
+    fflush(stdout);
 }
 
 /* --- dispatcher ------------------------------------------------------------- */
@@ -119,7 +120,11 @@ static void hle_DisplaySetFrameBuf(RtCtx *c) {
     if (A0 && prev && A0 != prev) {
         uint64_t now = k_now, wait = g_next_flip > now ? g_next_flip - now : 0;
         g_next_flip = (g_next_flip > now ? g_next_flip : now) + VBLANK_US - 10;
-        if (wait > 1000) k_wait(WT_VBLANK, 0, wait);
+        if (wait > 1000) {
+            uint64_t wake = now + wait;
+            k_wait(WT_VBLANK, 0, wait);
+            if (k_now > wake) g_next_flip += k_now - wake;
+        }
     }
     RET(0);
 }

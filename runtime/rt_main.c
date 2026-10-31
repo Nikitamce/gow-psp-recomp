@@ -180,13 +180,31 @@ static LONG WINAPI on_crash(EXCEPTION_POINTERS *e) {
     char mod[MAX_PATH] = "?";
     HMODULE hm = NULL;
     void *addr = e && e->ExceptionRecord ? e->ExceptionRecord->ExceptionAddress : NULL;
+    DWORD code = e && e->ExceptionRecord ? e->ExceptionRecord->ExceptionCode : 0;
     if (addr && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                                    (LPCSTR)addr, &hm))
         GetModuleFileNameA(hm, mod, sizeof(mod));
     const char *base = strrchr(mod, '\\');
-    printf("[crash] exception %08lX at %p (%s+%llX)\n", e && e->ExceptionRecord ? (unsigned long)e->ExceptionRecord->ExceptionCode : 0ul,
-           addr, base ? base + 1 : mod, (unsigned long long)((char *)addr - (char *)hm));
-    fflush(NULL);
+    fprintf(stderr, "\n=======================================================\n");
+    fprintf(stderr, "[CRASH] Unhandled Exception: 0x%08lX\n", (unsigned long)code);
+    fprintf(stderr, "[CRASH] Fault Address: %p (%s + 0x%llX)\n", addr, base ? base + 1 : mod,
+           (unsigned long long)((char *)addr - (char *)hm));
+    if (e && e->ContextRecord) {
+        CONTEXT *ctx = e->ContextRecord;
+#if defined(_M_X64) || defined(__x86_64__)
+        fprintf(stderr, "[CRASH] Registers: RAX=%016llX RBX=%016llX RCX=%016llX RDX=%016llX\n",
+               (unsigned long long)ctx->Rax, (unsigned long long)ctx->Rbx,
+               (unsigned long long)ctx->Rcx, (unsigned long long)ctx->Rdx);
+        fprintf(stderr, "[CRASH]            RSI=%016llX RDI=%016llX RBP=%016llX RSP=%016llX\n",
+               (unsigned long long)ctx->Rsi, (unsigned long long)ctx->Rdi,
+               (unsigned long long)ctx->Rbp, (unsigned long long)ctx->Rsp);
+        fprintf(stderr, "[CRASH]            RIP=%016llX EFL=%08lX\n",
+               (unsigned long long)ctx->Rip, (unsigned long)ctx->EFlags);
+#endif
+    }
+    fprintf(stderr, "=======================================================\n\n");
+    fflush(stderr);
+    fflush(stdout);
     return g_prev_filter ? g_prev_filter(e) : EXCEPTION_CONTINUE_SEARCH;
 }
 

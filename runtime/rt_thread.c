@@ -298,6 +298,7 @@ static void report_threads(void) {
 
 int (*k_idle_hook)(uint64_t now_us, uint64_t next_us);
 uint64_t k_idle_skip;
+int k_idle_vblank;
 
 int k_run_scheduler(uint32_t cpu_ms_limit) {
     g_sched = rt_fiber_init_main();
@@ -319,13 +320,29 @@ int k_run_scheduler(uint32_t cpu_ms_limit) {
                 result = RT_ABORT_DEADLOCK;
                 break;
             }
+            k_idle_vblank = 0;
+            for (int i = 1; i < MAX_OBJ; i++) {
+                KThread *w = thread_at(i);
+                if (w && w->status == TS_WAIT && w->wait_type == WT_VBLANK && w->wake_time == next) k_idle_vblank = 1;
+            }
             if (k_idle_hook && next > k_now && k_idle_hook(k_now, next)) {
                 rt_last_abort.kind = RT_ABORT_HLE;
                 rt_last_abort.what = "window closed";
                 result = RT_ABORT_HLE;
                 break;
             }
-            if (k_idle_skip) { next += k_idle_skip; k_idle_skip = 0; }
+            if (k_idle_skip) {
+                if (k_idle_vblank) {
+                    for (int i = 1; i < MAX_OBJ; i++) {
+                        KThread *w = thread_at(i);
+                        if (w && w->status == TS_WAIT && w->wait_type == WT_VBLANK && w->wake_time == next)
+                            w->wake_time += k_idle_skip;
+                    }
+                } else {
+                    next += k_idle_skip;
+                }
+                k_idle_skip = 0;
+            }
             if (next > k_now) k_now = next;
             wake_due();
             continue;

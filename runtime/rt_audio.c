@@ -262,8 +262,8 @@ static uint64_t ch_queue(AudioCh *ch, uint32_t addr) {
 uint64_t rt_audio_skip_budget_us(uint64_t from_us) {
     uint64_t now = us_to_pos(from_us), least = UINT64_MAX;
     for (int i = 0; i < NCH; i++)
-        if (g_ch[i].reserved && g_ch[i].end + 11025 > now) {  /* playing, or ran out less than 250 ms ago (about to queue again) */
-            uint64_t left = g_ch[i].end > now ? g_ch[i].end - now : 0;
+        if (g_ch[i].reserved && g_ch[i].end > now) {
+            uint64_t left = g_ch[i].end - now;
             if (left < least) least = left;
         }
     return least == UINT64_MAX ? UINT64_MAX : pos_to_us(least);
