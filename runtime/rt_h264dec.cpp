@@ -15,7 +15,7 @@ struct RtH264Dec {
 extern "C" RtH264Dec *rt_h264dec_open(void) {
     ISVCDecoder *dec = nullptr;
     if (WelsCreateDecoder(&dec) != 0 || !dec) return nullptr;
-    int level = WELS_LOG_QUIET, threads = 0;
+    int level = WELS_LOG_QUIET, threads = 1;
     dec->SetOption(DECODER_OPTION_TRACE_LEVEL, &level);
     dec->SetOption(DECODER_OPTION_NUM_OF_THREADS, &threads);
     SDecodingParam p;

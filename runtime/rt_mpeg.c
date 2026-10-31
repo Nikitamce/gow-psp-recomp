@@ -611,19 +611,30 @@ static void hle_MpegRingbufferPut(RtCtx *c) {
     RET(first_err && !total ? (uint32_t)first_err : (uint32_t)total);
 }
 
+/* Drop unread ring packets without demuxing them into the ES buffers. The old loop called
+ * ring_packet until empty, which appended the rest of the file to ves/aes in one HLE call
+ * (and again on every poll after skip, as the game kept Put-ing) and often crashed. */
+static void discard_ring(Mpeg *m) {
+    if (!m->rb || m->next_packet != ring_packet) return;
+    m->taken = m->put;
+    rt_w32(m->rb + RB_AVAIL, 0);
+}
+
 /* Movie skipping: while pictures are showing, a skip press in the window ends the movie the way
  * its end does (no more AUs, sceMpegAvcDecode reports the stream over), so the game goes on
- * along its own path. What the game still puts in the ring buffer is consumed unread. */
+ * along its own path. What the game still puts in the ring buffer is dropped unread. */
 static void check_skip(Mpeg *m) {
-    if (m->skipped) { if (m->next_packet == ring_packet) while (ring_packet(m)) {} return; }
+    if (m->skipped) { discard_ring(m); return; }
     if (!m->video_frames || m->logged_end) return;
     rt_host_movie_playing(1);
     if (!rt_host_take_movie_skip()) return;
     m->skipped = 1;
     m->have_vau = m->have_aau = 0;
+    es_reset(&m->ves);
+    es_reset(&m->aes);
+    discard_ring(m);
     rt_host_movie_playing(0);
     rt_log("[mpeg] movie skipped after %u pictures\n", m->video_frames);
-    if (m->next_packet == ring_packet) while (ring_packet(m)) {}
 }
 
 /* (mpeg, streamId, au, attr) */
@@ -686,7 +697,13 @@ static void hle_MpegAvcDecode(RtCtx *c) {
 
 /* (mpeg, frameWidth, buffer, status): no picture is held back */
 static void hle_MpegAvcDecodeStop(RtCtx *c) { if (A3) rt_w32(A3, 0); RET(0); }
-static void hle_MpegAvcDecodeFlush(RtCtx *c) { RET(0); }
+/* After a skip the video thread returns here while VideoSoundThread may still be in
+ * sceAudioOutputPannedBlocking. A short wait lets that thread drain before Delete. */
+static void hle_MpegAvcDecodeFlush(RtCtx *c) {
+    Mpeg *m = ctx_of(A0);
+    if (m && m->skipped) delay_us(100000);
+    RET(0);
+}
 
 static void hle_MpegFlushAllStream(RtCtx *c) {
     Mpeg *m = ctx_of(A0);
