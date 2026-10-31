@@ -93,8 +93,14 @@ static uint32_t g_vblank_us = 16683u;
 void rt_display_set_hz(double hz) {
     g_vblank_us = hz >= 30 && hz <= 1000 && (hz < 59.5 || hz > 60.5) ? (uint32_t)(1e6 / hz + 0.5) : 16683u;
 }
-double rt_display_hz(void) { return g_vblank_us == 16683u ? 59.94 : 1e6 / g_vblank_us; }
-#define VBLANK_US g_vblank_us
+double rt_display_hz(void) {
+    /* Movies are 29.97 fps PSMF. At --fps 240 the flip wait and idle-skip fight the
+     * audio clock and the 6x/MSAA present, so the picture stutters at 15-20 fps. */
+    if (rt_host_movie_is_playing()) return 59.94;
+    return g_vblank_us == 16683u ? 59.94 : 1e6 / g_vblank_us;
+}
+static uint32_t display_vblank_us(void) { return rt_host_movie_is_playing() ? 16683u : g_vblank_us; }
+#define VBLANK_US display_vblank_us()
 static uint64_t g_frames;
 static uint32_t g_fb_addr, g_fb_width, g_fb_format;
 

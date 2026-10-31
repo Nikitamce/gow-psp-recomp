@@ -48,6 +48,7 @@ int rt_host_wants_idle(void);
  * player pressed a skip key (Enter, Space, a mouse button, gamepad Start or Cross) since? Only
  * live input in the window skips; scripted runs stay deterministic. */
 void rt_host_movie_playing(int on);
+int rt_host_movie_is_playing(void);
 int rt_host_take_movie_skip(void);
 
 /* The display's refresh (rt_hle.c): 59.94 Hz, or --fps N. */

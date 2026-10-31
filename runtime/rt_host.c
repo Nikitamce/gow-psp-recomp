@@ -551,6 +551,8 @@ void rt_host_movie_playing(int on) {
     g_movie_on = on;
 }
 
+int rt_host_movie_is_playing(void) { return g_movie_on; }
+
 /* A skip the player asked for is written to the input recording ("movie=US"), so that its replay
  * skips the same movie at the same point; a replay takes the recording's skips. */
 int rt_host_take_movie_skip(void) {
@@ -1015,6 +1017,7 @@ int rt_host_present(uint64_t frame, uint32_t addr, uint32_t stride, uint32_t for
 int rt_host_idle(uint64_t now_us, uint64_t next_us) { replay_skips(now_us, next_us); return 0; }
 static int live_input(uint32_t *b, int *lx, int *ly, uint64_t now_us) { (void)b; (void)lx; (void)ly; (void)now_us; return 0; }
 void rt_host_movie_playing(int on) { (void)on; }
+int rt_host_movie_is_playing(void) { return 0; }
 int rt_host_take_movie_skip(void) { return replay_movie_skip(); }
 void rt_host_rumble(float strength, int ms) { (void)strength; (void)ms; }
 int rt_host_button_icon_mode(void) { return 1; }

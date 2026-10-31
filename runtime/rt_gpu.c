@@ -519,7 +519,10 @@ static void upload_to_target(int ti, int x, int y, int w, int h, uint32_t addr, 
         record_upload(st->tex, 0, 0, w, h, addr, pitch, fmt);
         record_blit(st->tex, -1, 0, 0, w, h, t->tex, x * t->s, y * t->s, w * t->s, h * t->s, filter);
     }
-    unresolve(ti, x, y, w, h);
+    /* Movie frames are CPU pictures plus a 2D subtitle list. Copying each into the 8x MSAA
+     * target (2880x1632 at --res-scale 6) was the hitch. Draw those passes on the resolved
+     * colour texture instead. */
+    if (!rt_host_movie_is_playing()) unresolve(ti, x, y, w, h);
 }
 
 /* --- render targets ----------------------------------------------------------------- */
@@ -1822,10 +1825,11 @@ static void render_frame(SDL_GPUCommandBuffer *cmd) {
             s = t->s;
             SDL_GPUColorTargetInfo ci;
             memset(&ci, 0, sizeof(ci));
-            ci.texture = t->ms ? t->ms : t->tex;
+            int movie = rt_host_movie_is_playing();
+            ci.texture = (t->ms && !movie) ? t->ms : t->tex;
             ci.load_op = SDL_GPU_LOADOP_LOAD;  /* a new target was uploaded from memory first */
             ci.store_op = SDL_GPU_STOREOP_STORE;
-            if (t->ms && c->resolve) {
+            if (t->ms && c->resolve && !movie) {
                 /* the resolve texture only on a pass that resolves: SDL's Vulkan backend keys its
                  * framebuffer cache on it but builds the framebuffer by the store op, so a pass that
                  * only stores would leave a framebuffer without the resolve attachment for the next
