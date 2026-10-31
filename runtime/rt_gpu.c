@@ -555,10 +555,16 @@ static int target_textures(Target *t) {
     return 1;
 }
 
+/* Shown framebuffers: native 480x272 during FMV (the movie is that size; 6x+MSAA 8 on
+ * every picture was ~20 fps). Gameplay keeps --res-scale. */
+static int display_scale(void) { return rt_host_movie_is_playing() ? 1 : g_scale; }
+
 /* The scale of a new target: the effects scale (--fx-scale) unless it is a framebuffer the game shows */
 static int target_scale(uint32_t addr) {
+    int shown = 0;
+    for (int i = 0; i < g_ndisp; i++) if (g_disp[i] == addr) { shown = 1; break; }
+    if (shown) return display_scale();
     if (g_fx_scale == g_scale) return g_scale;
-    for (int i = 0; i < g_ndisp; i++) if (g_disp[i] == addr) return g_scale;
     return g_fx_scale;
 }
 
@@ -2349,7 +2355,7 @@ void rt_gpu_present(uint32_t addr, uint32_t stride, uint32_t fmt) {
                 tg->version++;
             }
         }
-        if (t >= 0 && g_targets[t].s != g_scale) g_targets[t].want_s = g_scale;  /* shown: the full scale, from the next frame */
+        if (t >= 0 && g_targets[t].s != display_scale()) g_targets[t].want_s = display_scale();
     }
     SDL_GPUCommandBuffer *cmd = SDL_AcquireGPUCommandBuffer(g_dev);
     if (!cmd) return;
