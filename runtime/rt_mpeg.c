@@ -676,7 +676,9 @@ static void hle_MpegAvcDecode(RtCtx *c) {
     uint32_t buffer = rt_r32(A3);
     if (!m->have_vau && !next_video_au(m)) {
         if (init) rt_w32(init, 0);
-        if (stream_done(m)) { delay_us(DELAY_AVC_EMPTY); RET(ERR_AVC_DECODE_FATAL); }
+        /* CoO's player exits the movie loop on ERR_NO_DATA. ERR_AVC_DECODE_FATAL
+         * (PPSSPP's empty-stream code) stalls worker threads after a skip. */
+        if (stream_done(m)) { delay_us(DELAY_AVC_EMPTY); RET(ERR_NO_DATA); }
         delay_us(DELAY_AVC_DECODE);
         RET(0);
     }
